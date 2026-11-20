@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>매출 대시보드 2026</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d23; --muted:#667085; --line:#e4e7ec;
+  --accent:#3b5bdb; --accent-soft:#c9d3f7; --dim:#d5dae3; --hover:#f0f3fa;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111317; --card:#1a1d23; --ink:#e8eaee; --muted:#98a1b2; --line:#2c313a;
+    --accent:#7b93f2; --accent-soft:#34406b; --dim:#3a404b; --hover:#232833;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111317; --card:#1a1d23; --ink:#e8eaee; --muted:#98a1b2; --line:#2c313a;
+  --accent:#7b93f2; --accent-soft:#34406b; --dim:#3a404b; --hover:#232833;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+h1{font-size:22px;margin:0}
+.sub{color:var(--muted);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:32px;margin-bottom:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:var(--accent-soft);color:var(--ink);border:0;font:inherit;font-size:13px;cursor:pointer}
+.chip b{font-weight:600}
+.reset{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.hint{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .label{color:var(--muted);font-size:12px}
+.kpi .val{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+.grid>*,.kpis>*{min-width:0}
+.card h2{font-size:15px;margin:0 0 2px}
+.card .desc{color:var(--muted);font-size:12px;margin-bottom:12px}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;float:right}
+.tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 10px;cursor:pointer}
+.tabs button.on{background:var(--accent);color:#fff}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--muted);font-size:11px}
+svg .bar{cursor:pointer;transition:fill .15s}
+svg .val{fill:var(--ink);font-size:11px;font-weight:600}
+svg .lbl{fill:var(--ink);font-size:12px}
+svg g.row:hover .bg{fill:var(--hover)}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--card);padding:6px 10px;border-radius:6px;
+  font-size:12px;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:nth-child(-n+3),td:nth-child(-n+3){text-align:left}
+th{color:var(--muted);font-weight:500;font-size:12px;cursor:pointer;user-select:none}
+th.sorted{color:var(--ink)}
+.tablewrap{overflow-x:auto;max-height:420px;overflow-y:auto}
+thead th{position:sticky;top:0;background:var(--card)}
+@media (max-width:760px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}
+  .kpi .val{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>매출 대시보드 2026</h1>
+      <div class="sub">2026년 1~10월 · 제품 5종 · 채널 4곳 · 출처: [교육용 더미] 매출 데이터 2026</div>
+    </div>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="label">총 매출</div><div class="val" id="kRev"></div></div>
+    <div class="card kpi"><div class="label">판매 수량</div><div class="val" id="kQty"></div></div>
+    <div class="card kpi"><div class="label">평균 판매가</div><div class="val" id="kAsp"></div></div>
+    <div class="card kpi"><div class="label">평균 할인율 (정가 대비)</div><div class="val" id="kDisc"></div></div>
+  </section>
+
+  <section class="grid">
+    <div class="card full">
+      <div class="tabs" id="metricTabs">
+        <button data-m="rev" class="on">매출</button><button data-m="qty">수량</button>
+      </div>
+      <h2>월별 추이</h2>
+      <div class="desc">막대를 누르면 그 달만 봅니다. 한 번 더 누르면 해제됩니다.</div>
+      <div id="chMonth"></div>
+    </div>
+    <div class="card">
+      <h2>제품별</h2>
+      <div class="desc">제품을 누르면 그 제품만 봅니다.</div>
+      <div id="chProd"></div>
+    </div>
+    <div class="card">
+      <h2>채널별</h2>
+      <div class="desc">채널을 누르면 그 채널만 봅니다.</div>
+      <div id="chChan"></div>
+    </div>
+    <div class="card full">
+      <h2>상세 데이터 <span class="sub" id="rowCount"></span></h2>
+      <div class="desc">열 제목을 누르면 정렬됩니다.</div>
+      <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const MONTHS=["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"];
+const PRODS=["데일리 선크림","진정 시카 앰플","수분 장벽 크림","에센셜 마스크팩(10매)","약산성 클렌징폼"];
+const CHANS=["올리브영","자사몰","쿠팡","아마존(해외)"];
+const RAW="0,0,0,439,19000,20,6672800;0,0,1,209,19000,10,3573900;0,0,2,330,19000,20,5016000;0,0,3,237,19000,0,4503000;0,1,0,600,24000,0,14400000;0,1,1,300,24000,10,6480000;0,1,2,487,24000,0,11688000;0,1,3,404,24000,5,9211200;0,2,0,587,28000,0,16436000;0,2,1,323,28000,0,9044000;0,2,2,502,28000,0,14056000;0,2,3,351,28000,15,8353800;0,3,0,795,15000,5,11328750;0,3,1,324,15000,5,4617000;0,3,2,521,15000,20,6252000;0,3,3,422,15000,5,6013500;0,4,0,746,12000,0,8952000;0,4,1,369,12000,10,3985200;0,4,2,497,12000,10,5367600;0,4,3,371,12000,0,4452000;1,0,0,566,19000,10,9678600;1,0,1,242,19000,10,4138200;1,0,2,365,19000,0,6935000;1,0,3,305,19000,0,5795000;1,1,0,595,24000,0,14280000;1,1,1,318,24000,0,7632000;1,1,2,456,24000,15,9302400;1,1,3,388,24000,0,9312000;1,2,0,650,28000,0,18200000;1,2,1,267,28000,10,6728400;1,2,2,426,28000,20,9542400;1,2,3,439,28000,10,11062800;1,3,0,921,15000,20,11052000;1,3,1,394,15000,5,5614500;1,3,2,627,15000,10,8464500;1,3,3,537,15000,0,8055000;1,4,0,715,12000,20,6864000;1,4,1,371,12000,0,4452000;1,4,2,528,12000,10,5702400;1,4,3,481,12000,0,5772000;2,0,0,741,19000,0,14079000;2,0,1,405,19000,10,6925500;2,0,2,496,19000,15,8010400;2,0,3,578,19000,10,9883800;2,1,0,664,24000,20,12748800;2,1,1,292,24000,5,6657600;2,1,2,373,24000,0,8952000;2,1,3,342,24000,5,7797600;2,2,0,506,28000,5,13459600;2,2,1,246,28000,0,6888000;2,2,2,314,28000,20,7033600;2,2,3,303,28000,15,7211400;2,3,0,844,15000,15,10761000;2,3,1,391,15000,0,5865000;2,3,2,546,15000,0,8190000;2,3,3,595,15000,20,7140000;2,4,0,733,12000,5,8356200;2,4,1,308,12000,10,3326400;2,4,2,425,12000,20,4080000;2,4,3,389,12000,0,4668000;3,0,0,968,19000,20,14713600;3,0,1,554,19000,0,10526000;3,0,2,710,19000,5,12815500;3,0,3,835,19000,20,12692000;3,1,0,680,24000,10,14688000;3,1,1,261,24000,5,5950800;3,1,2,503,24000,5,11468400;3,1,3,396,24000,5,9028800;3,2,0,406,28000,0,11368000;3,2,1,204,28000,10,5140800;3,2,2,260,28000,0,7280000;3,2,3,235,28000,0,6580000;3,3,0,737,15000,10,9949500;3,3,1,415,15000,0,6225000;3,3,2,591,15000,0,8865000;3,3,3,489,15000,15,6234750;3,4,0,691,12000,20,6633600;3,4,1,347,12000,0,4164000;3,4,2,513,12000,20,4924800;3,4,3,466,12000,15,4753200;4,0,0,1416,19000,15,22868400;4,0,1,590,19000,10,10089000;4,0,2,958,19000,5,17291900;4,0,3,1103,19000,5,19909150;4,1,0,662,24000,20,12710400;4,1,1,308,24000,5,7022400;4,1,2,422,24000,20,8102400;4,1,3,434,24000,10,9374400;4,2,0,328,28000,10,8265600;4,2,1,121,28000,5,3218600;4,2,2,221,28000,0,6188000;4,2,3,247,28000,5,6570200;4,3,0,751,15000,20,9012000;4,3,1,396,15000,0,5940000;4,3,2,594,15000,20,7128000;4,3,3,552,15000,0,8280000;4,4,0,747,12000,10,8067600;4,4,1,348,12000,10,3758400;4,4,2,480,12000,10,5184000;4,4,3,587,12000,10,6339600;5,0,0,1812,19000,20,27542400;5,0,1,647,19000,5,11678350;5,0,2,1025,19000,5,18501250;5,0,3,1108,19000,5,19999400;5,1,0,520,24000,20,9984000;5,1,1,281,24000,5,6406800;5,1,2,386,24000,20,7411200;5,1,3,473,24000,15,9649200;5,2,0,307,28000,5,8166200;5,2,1,117,28000,10,2948400;5,2,2,170,28000,10,4284000;5,2,3,189,28000,5,5027400;5,3,0,905,15000,5,12896250;5,3,1,329,15000,10,4441500;5,3,2,642,15000,0,9630000;5,3,3,595,15000,15,7586250;5,4,0,718,12000,0,8616000;5,4,1,279,12000,10,3013200;5,4,2,520,12000,15,5304000;5,4,3,584,12000,10,6307200;6,0,0,1657,19000,15,26760550;6,0,1,874,19000,10,14945400;6,0,2,1148,19000,10,19630800;6,0,3,1216,19000,15,19638400;6,1,0,623,24000,0,14952000;6,1,1,323,24000,0,7752000;6,1,2,395,24000,20,7584000;6,1,3,546,24000,10,11793600;6,2,0,310,28000,15,7378000;6,2,1,139,28000,5,3697400;6,2,2,200,28000,0,5600000;6,2,3,191,28000,0,5348000;6,3,0,878,15000,10,11853000;6,3,1,391,15000,5,5571750;6,3,2,634,15000,0,9510000;6,3,3,623,15000,20,7476000;6,4,0,668,12000,15,6813600;6,4,1,353,12000,0,4236000;6,4,2,501,12000,15,5110200;6,4,3,627,12000,15,6395400;7,0,0,1506,19000,15,24321900;7,0,1,771,19000,10,13184100;7,0,2,1230,19000,10,21033000;7,0,3,1333,19000,0,25327000;7,1,0,670,24000,15,13668000;7,1,1,296,24000,5,6748800;7,1,2,505,24000,15,10302000;7,1,3,486,24000,20,9331200;7,2,0,309,28000,0,8652000;7,2,1,135,28000,10,3402000;7,2,2,210,28000,0,5880000;7,2,3,222,28000,10,5594400;7,3,0,964,15000,15,12291000;7,3,1,455,15000,5,6483750;7,3,2,651,15000,10,8788500;7,3,3,734,15000,0,11010000;7,4,0,829,12000,0,9948000;7,4,1,314,12000,0,3768000;7,4,2,505,12000,20,4848000;7,4,3,608,12000,0,7296000;8,0,0,1133,19000,0,21527000;8,0,1,424,19000,0,8056000;8,0,2,672,19000,10,11491200;8,0,3,791,19000,0,15029000;8,1,0,637,24000,15,12994800;8,1,1,235,24000,0,5640000;8,1,2,466,24000,20,8947200;8,1,3,451,24000,0,10824000;8,2,0,425,28000,10,10710000;8,2,1,200,28000,5,5320000;8,2,2,345,28000,0,9660000;8,2,3,369,28000,0,10332000;8,3,0,888,15000,10,11988000;8,3,1,307,15000,5,4374750;8,3,2,638,15000,0,9570000;8,3,3,768,15000,0,11520000;8,4,0,739,12000,10,7981200;8,4,1,354,12000,10,3823200;8,4,2,537,12000,10,5799600;8,4,3,616,12000,0,7392000;9,0,0,773,19000,5,13952650;9,0,1,317,19000,5,5721850;9,0,2,541,19000,0,10279000;9,0,3,668,19000,10,11422800;9,1,0,573,24000,0,13752000;9,1,1,321,24000,5,7318800;9,1,2,376,24000,0,9024000;9,1,3,536,24000,0,12864000;9,2,0,655,28000,0,18340000;9,2,1,277,28000,10,6980400;9,2,2,432,28000,10,10886400;9,2,3,436,28000,15,10376800;9,3,0,776,15000,10,10476000;9,3,1,376,15000,5,5358000;9,3,2,528,15000,20,6336000;9,3,3,675,15000,0,10125000;9,4,0,772,12000,20,7411200;9,4,1,340,12000,10,3672000;9,4,2,530,12000,10,5724000;9,4,3,558,12000,15,5691600";
+const DATA=RAW.split(";").map(s=>{const a=s.split(",").map(Number);return{m:a[0],p:a[1],c:a[2],qty:a[3],price:a[4],disc:a[5],rev:a[6]}});
+
+const sel={m:null,p:null,c:null};
+let metric="rev";
+let sort={key:"rev",dir:-1};
+
+const won=v=>{
+  if(v>=1e8) return (v/1e8).toFixed(2).replace(/\.?0+$/,"")+"억";
+  if(v>=1e4) return Math.round(v/1e4).toLocaleString("ko-KR")+"만";
+  return Math.round(v).toLocaleString("ko-KR");
+};
+const num=v=>Math.round(v).toLocaleString("ko-KR");
+const pick=(except)=>DATA.filter(d=>["m","p","c"].every(k=>k===except||sel[k]===null||d[k]===sel[k]));
+const sum=(rows,f)=>rows.reduce((s,d)=>s+d[f],0);
+const tip=document.getElementById("tip");
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;
+  const x=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8);tip.style.left=x+"px";tip.style.top=(e.clientY+12)+"px"}
+function hideTip(){tip.style.opacity=0}
+function toggle(k,i){sel[k]=sel[k]===i?null:i;render()}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderFilters(){
+  const el=document.getElementById("filters");
+  const names={m:["월",MONTHS],p:["제품",PRODS],c:["채널",CHANS]};
+  const chips=Object.keys(sel).filter(k=>sel[k]!==null)
+    .map(k=>`<button class="chip" data-k="${k}">${names[k][0]}: <b>${esc(names[k][1][sel[k]])}</b> ✕</button>`);
+  el.innerHTML=chips.length
+    ? chips.join("")+`<button class="chip reset" id="resetAll">전체 해제</button>`
+    : `<span class="hint">전체 기간 · 전체 제품 · 전체 채널을 보고 있습니다. 차트를 눌러 범위를 좁혀 보세요.</span>`;
+  el.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{sel[b.dataset.k]=null;render()});
+  const r=document.getElementById("resetAll"); if(r) r.onclick=()=>{sel.m=sel.p=sel.c=null;render()};
+}
+
+function renderKpis(){
+  const rows=pick();
+  const rev=sum(rows,"rev"),qty=sum(rows,"qty"),list=rows.reduce((s,d)=>s+d.qty*d.price,0);
+  document.getElementById("kRev").textContent=won(rev)+"원";
+  document.getElementById("kQty").textContent=num(qty)+"개";
+  document.getElementById("kAsp").textContent=qty?num(rev/qty)+"원":"-";
+  document.getElementById("kDisc").textContent=list?((1-rev/list)*100).toFixed(1)+"%":"-";
+}
+
+function renderMonth(){
+  const rows=pick("m");
+  const vals=MONTHS.map((_,i)=>rows.filter(d=>d.m===i).reduce((s,d)=>s+d[metric],0));
+  const max=Math.max(...vals,1),W=1000,H=260,pl=8,pb=28,pt=22,bw=(W-pl*2)/MONTHS.length;
+  const fmt=metric==="rev"?won:num;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 추이">`;
+  vals.forEach((v,i)=>{
+    const h=(H-pb-pt)*v/max,x=pl+i*bw+bw*0.18,w=bw*0.64,y=H-pb-h;
+    const on=sel.m===null||sel.m===i;
+    s+=`<g class="row" data-i="${i}"><rect class="bg" x="${pl+i*bw}" y="0" width="${bw}" height="${H-pb}" fill="transparent"/>
+      <rect class="bar" x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="var(${on?"--accent":"--dim"})"/>
+      <text class="val" x="${x+w/2}" y="${y-6}" text-anchor="middle">${fmt(v)}</text>
+      <text x="${x+w/2}" y="${H-8}" text-anchor="middle">${+MONTHS[i].slice(5)}월</text></g>`;
+  });
+  s+=`<line x1="0" x2="${W}" y1="${H-pb}" y2="${H-pb}" stroke="var(--line)"/></svg>`;
+  const el=document.getElementById("chMonth");el.innerHTML=s;
+  el.querySelectorAll("g.row").forEach(g=>{const i=+g.dataset.i;
+    g.style.cursor="pointer";g.onclick=()=>toggle("m",i);
+    g.onmousemove=e=>showTip(e,`${MONTHS[i]} · ${metric==="rev"?won(vals[i])+"원":num(vals[i])+"개"}`);g.onmouseleave=hideTip;});
+}
+
+function renderHBars(id,k,labels){
+  const rows=pick(k);
+  const items=labels.map((l,i)=>{const r=rows.filter(d=>d[k]===i);return{i,l,rev:sum(r,"rev"),qty:sum(r,"qty")}})
+    .sort((a,b)=>b[metric]-a[metric]);
+  const total=items.reduce((s,d)=>s+d[metric],0)||1,max=Math.max(...items.map(d=>d[metric]),1);
+  const W=500,rh=40,lw=150,H=items.length*rh,fmt=metric==="rev"?won:num;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img">`;
+  items.forEach((d,j)=>{
+    const y=j*rh,w=(W-lw-70)*d[metric]/max,on=sel[k]===null||sel[k]===d.i;
+    s+=`<g class="row" data-i="${d.i}"><rect class="bg" x="0" y="${y}" width="${W}" height="${rh}" rx="6" fill="transparent"/>
+      <text class="lbl" x="6" y="${y+rh/2+4}">${esc(d.l)}</text>
+      <rect class="bar" x="${lw}" y="${y+10}" width="${Math.max(w,2)}" height="${rh-20}" rx="4" fill="var(${on?"--accent":"--dim"})"/>
+      <text class="val" x="${lw+w+6}" y="${y+rh/2+4}">${fmt(d[metric])} <tspan style="fill:var(--muted);font-weight:400">${(d[metric]/total*100).toFixed(0)}%</tspan></text></g>`;
+  });
+  s+="</svg>";
+  const el=document.getElementById(id);el.innerHTML=s;
+  el.querySelectorAll("g.row").forEach(g=>{const i=+g.dataset.i,d=items.find(x=>x.i===i);
+    g.style.cursor="pointer";g.onclick=()=>toggle(k,i);
+    g.onmousemove=e=>showTip(e,`${esc(d.l)} · 매출 ${won(d.rev)}원 · ${num(d.qty)}개`);g.onmouseleave=hideTip;});
+}
+
+const COLS=[["m","월"],["p","제품"],["c","채널"],["qty","판매수량"],["price","정가"],["disc","할인율"],["rev","매출"]];
+function renderTable(){
+  const rows=pick().slice().sort((a,b)=>{
+    const av=a[sort.key],bv=b[sort.key];return (av>bv?1:av<bv?-1:0)*sort.dir});
+  const t=document.getElementById("tbl");
+  t.tHead.innerHTML="<tr>"+COLS.map(([k,l])=>`<th data-k="${k}" class="${sort.key===k?"sorted":""}">${l}${sort.key===k?(sort.dir>0?" ▲":" ▼"):""}</th>`).join("")+"</tr>";
+  t.tBodies[0].innerHTML=rows.map(d=>`<tr><td>${MONTHS[d.m]}</td><td>${esc(PRODS[d.p])}</td><td>${esc(CHANS[d.c])}</td>
+    <td>${num(d.qty)}</td><td>${num(d.price)}</td><td>${d.disc}%</td><td>${num(d.rev)}</td></tr>`).join("");
+  t.tHead.querySelectorAll("th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;sort=sort.key===k?{key:k,dir:-sort.dir}:{key:k,dir:["m","p","c"].includes(k)?1:-1};renderTable()});
+  document.getElementById("rowCount").textContent=`· ${rows.length}행`;
+}
+
+document.querySelectorAll("#metricTabs button").forEach(b=>b.onclick=()=>{
+  metric=b.dataset.m;document.querySelectorAll("#metricTabs button").forEach(x=>x.classList.toggle("on",x===b));render()});
+
+function render(){renderFilters();renderKpis();renderMonth();renderHBars("chProd","p",PRODS);renderHBars("chChan","c",CHANS);renderTable()}
+render();
+</script>
+</body>
+</html>
